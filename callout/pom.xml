@@ -4,9 +4,9 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.google.apigee.edgecallouts</groupId>
-  <artifactId>edge-wssecusernametoken</artifactId>
-  <version>20200221</version>
-  <name>EdgeJavaWssecUsernameToken</name>
+  <artifactId>apigee-wssecusernametoken</artifactId>
+  <version>20210409</version>
+  <name>ApigeeJavaWssecUsernameToken</name>
   <url>http://maven.apache.org</url>
   <packaging>jar</packaging>
   <properties>
@@ -163,7 +163,7 @@ do it manually by running these commands:
             <configuration>
               <rules>
                 <requireMavenVersion>
-                  <version>3.0.5</version>
+                  <version>3.5.0</version>
                 </requireMavenVersion>
               </rules>
             </configuration>

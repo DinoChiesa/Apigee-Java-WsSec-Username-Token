@@ -1,7 +1,7 @@
-# Java Callout for WS-Security Username Token
+# Apigee Java Callout for WS-Security Username Token
 
 This directory contains the Java source code and pom.xml file required
-to compile a simple Java callout for Apigee Edge, that inserts a
+to compile a simple Java callout for Apigee, that inserts a
 username token that complies with WS-Security standard into a SOAP message.
 
 ## Disclaimer
@@ -10,7 +10,7 @@ This example is not an official Google product, nor is it part of an official Go
 
 ## License
 
-This material is Copyright 2018-2020, Google LLC.
+This material is Copyright 2018-2021, Google LLC.
 and is licensed under the Apache 2.0 license. See the [LICENSE](LICENSE) file.
 
 This code is open source but you don't need to compile it in order to use it.
@@ -31,10 +31,10 @@ environment-wide or organization-wide jar via the Apigee administrative API.
 
 ## Details
 
-There is a single jar, edge-wssecusernametoken-20200221.jar . Within that jar,
+There is a single jar, apigee-wssecusernametoken-20200409.jar . Within that jar,
 there is a single callout classes:
 
-* com.google.apigee.edgecallouts.wssecusernametoken.Inject
+* com.google.apigee.callouts.wssecusernametoken.Inject
 
 Use this class to inject the username  token into the input SOAP document.
 It also will insert a nonce and a timestamp.  The resulting header is like this: 
@@ -50,7 +50,7 @@ It also will insert a nonce and a timestamp.  The resulting header is like this:
 
 ## Dependencies
 
-None. 
+None.
 
 This Callout does not depend on WSS4J.  This callout is intended to be
 usable in Apigee SaaS.
@@ -67,8 +67,8 @@ Configure the policy this way:
     <Property name='username'>{my_username}</Property>
     <Property name='password'>{my_password}</Property>
   </Properties>
-  <ClassName>com.google.apigee.edgecallouts.wssecusernametoken.Inject</ClassName>
-  <ResourceURL>java://edge-wssecusernametoken-20200221.jar</ResourceURL>
+  <ClassName>com.google.apigee.callouts.wssecusernametoken.Inject</ClassName>
+  <ResourceURL>java://apigee-wssecusernametoken-20200409.jar</ResourceURL>
 </JavaCallout>
 ```
 

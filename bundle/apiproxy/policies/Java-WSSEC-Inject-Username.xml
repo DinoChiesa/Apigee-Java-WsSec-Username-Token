@@ -5,6 +5,6 @@
     <Property name='username'>emil@gaffanon.com</Property>
     <Property name='password'>my_secret_password!</Property>
   </Properties>
-  <ClassName>com.google.apigee.edgecallouts.wssecusernametoken.Inject</ClassName>
-  <ResourceURL>java://edge-wssecusernametoken-20200221.jar</ResourceURL>
+  <ClassName>com.google.apigee.callouts.wssecusernametoken.Inject</ClassName>
+  <ResourceURL>java://apigee-wssecusernametoken-20200221.jar</ResourceURL>
 </JavaCallout>

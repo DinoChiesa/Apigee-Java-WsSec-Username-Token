@@ -1,7 +1,6 @@
-package com.google.apigee.edgecallouts.test;
+package com.google.apigee.callouts.wssecusernametoken;
 
 import com.apigee.flow.execution.ExecutionResult;
-import com.google.apigee.edgecallouts.wssecusernametoken.Inject;
 import com.google.apigee.xml.Namespaces;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;

@@ -1,5 +1,16 @@
-// CalloutTestBase.java
-// ------------------------------------------------------------------
+// Copyright © 2019-2022 Google LLC.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     https://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 //
 
 package com.google.apigee.callouts.wssecusernametoken;
@@ -31,24 +42,24 @@ public abstract class CalloutTestBase {
 
     msgCtxt =
         new MockUp<MessageContext>() {
-          private Map variables;
+          private Map<String,Object> variables;
 
           public void $init() {
-            variables = new HashMap();
+            variables = new HashMap<String,Object>();
           }
 
           @Mock()
-          public <T> T getVariable(final String name) {
+          public Object getVariable(final String name) {
             if (variables == null) {
-              variables = new HashMap();
+              variables = new HashMap<String,Object>();
             }
-            return (T) variables.get(name);
+            return variables.get(name);
           }
 
           @Mock()
           public boolean setVariable(final String name, final Object value) {
             if (variables == null) {
-              variables = new HashMap();
+              variables = new HashMap<String,Object>();
             }
             System.out.printf("setVariable(%s, %s)\n", name, value.toString());
             variables.put(name, value);
@@ -58,7 +69,7 @@ public abstract class CalloutTestBase {
           @Mock()
           public boolean removeVariable(final String name) {
             if (variables == null) {
-              variables = new HashMap();
+              variables = new HashMap<String,Object>();
             }
             if (variables.containsKey(name)) {
               variables.remove(name);

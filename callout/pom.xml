@@ -126,8 +126,9 @@ do it manually by running these commands:
       </plugin>
 
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-antrun-plugin</artifactId>
-        <version>3.0.0</version>
+        <version>3.1.0</version>
         <executions>
           <execution>
             <id>ant1</id>
@@ -155,9 +156,7 @@ do it manually by running these commands:
                 <copy todir="${apiproxy.java.rsrc.dir}">
                   <fileset dir="${project.build.directory}">
                     <include name="${project.build.finalName}.jar"/>
-                    <!-- copy any required dependencies that are not
-                    already included in the Edge runtime:
-                    -->
+                    <!-- copy any required dependencies -->
                     <include name="lib/*.jar"/>
                     <exclude name="lib/message-flow-1.0.0.jar"/>
                     <exclude name="lib/expressions-1.0.0.jar"/>

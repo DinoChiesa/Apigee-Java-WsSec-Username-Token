@@ -10,14 +10,19 @@ This example is not an official Google product, nor is it part of an official Go
 
 ## License
 
-This material is Copyright 2018-2021, Google LLC.
+This material is Copyright 2018-2022, Google LLC.
 and is licensed under the Apache 2.0 license. See the [LICENSE](LICENSE) file.
 
 This code is open source but you don't need to compile it in order to use it.
 
 ## Building
 
-Use maven to build and package the jar. You need maven v3.5 at a minimum.
+You do not need to build the callout in order to use it.
+
+If you do wish to build it, you must use [maven](https://maven.apache.org/) to
+build and package the jar. You need maven v3.5 at a minimum. The callout builds
+with java8. It will not build with a later JDK, because of a depedency on
+JMockit which requires Java8.
 
 ```
 mvn clean package
@@ -31,13 +36,13 @@ environment-wide or organization-wide jar via the Apigee administrative API.
 
 ## Details
 
-There is a single jar, apigee-wssecusernametoken-20200409.jar . Within that jar,
+There is a single jar, apigee-wssecusernametoken-20210409.jar . Within that jar,
 there is a single callout classes:
 
 * com.google.apigee.callouts.wssecusernametoken.Inject
 
-Use this class to inject the username  token into the input SOAP document.
-It also will insert a nonce and a timestamp.  The resulting header is like this: 
+Use this class to inject the username token into the input SOAP document.
+It also will insert a nonce and a timestamp.  The resulting header is like this:
 
 ```xml
  <wsse:UsernameToken wsu:Id="UsernameToken-33966159F436ED774C158171838890544">
@@ -53,7 +58,7 @@ It also will insert a nonce and a timestamp.  The resulting header is like this:
 None.
 
 This Callout does not depend on WSS4J.  This callout is intended to be
-usable in Apigee SaaS.
+usable in Apigee Cloud.
 
 ## Usage
 
@@ -118,14 +123,14 @@ Supposing the input XML looks like this:
 </soapenv:Envelope>
 ```
 
-Then, 
+Then,
 the modified payload looks like this:
 
 ```xml
-<soapenv:Envelope 
-    xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" 
-    xmlns:wssec="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" 
-    xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd" 
+<soapenv:Envelope
+    xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+    xmlns:wssec="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd"
+    xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd"
     xmlns:ns1="http://ws.example.com/">
   <soapenv:Header>
     <wssec:Security soapenv:mustUnderstand="1">
@@ -145,7 +150,7 @@ the modified payload looks like this:
 </soapenv:Envelope>
 ```
 
-This example has been prettified. 
+(This example has been prettified.)
 
 
 ## Bugs

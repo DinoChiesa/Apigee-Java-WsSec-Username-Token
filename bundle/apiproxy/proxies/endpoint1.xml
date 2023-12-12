@@ -38,37 +38,39 @@
     <Flow name="inject1">
       <Request>
         <Step>
-          <Condition>NOT((request.header.content-type =| "text/xml") OR (request.header.content-type =| "application/xml" ))</Condition>
+          <Condition>NOT((request.header.content-type =| "text/xml") OR
+                         (request.header.content-type =| "application/xml" ))</Condition>
           <Name>RF-Invalid-Request</Name>
+        </Step>
+        <Step>
+          <Name>Java-WSSEC-Inject-UsernameToken-with-Plaintext-Password</Name>
         </Step>
       </Request>
       <Response>
         <Step>
-          <Name>Java-WSSEC-Inject-UsernameToken-with-Plaintext-Password</Name>
-        </Step>
-        <Step>
           <Name>AM-Response</Name>
         </Step>
       </Response>
-      <Condition>(proxy.pathsuffix ~ "/inject1") and (request.verb = "POST")</Condition>
+      <Condition>(proxy.pathsuffix ~/ "/inject1") and (request.verb = "POST")</Condition>
     </Flow>
 
     <Flow name="inject2">
       <Request>
         <Step>
-          <Condition>NOT((request.header.content-type =| "text/xml") OR (request.header.content-type =| "application/xml" ))</Condition>
+          <Condition>NOT((request.header.content-type =| "text/xml") OR
+                         (request.header.content-type =| "application/xml" ))</Condition>
           <Name>RF-Invalid-Request</Name>
+        </Step>
+        <Step>
+          <Name>Java-WSSEC-Inject-UsernameToken-with-Password-Digest</Name>
         </Step>
       </Request>
       <Response>
         <Step>
-          <Name>Java-WSSEC-Inject-UsernameToken-with-Password-Digest</Name>
-        </Step>
-        <Step>
           <Name>AM-Response</Name>
         </Step>
       </Response>
-      <Condition>(proxy.pathsuffix ~ "/inject2") and (request.verb = "POST")</Condition>
+      <Condition>(proxy.pathsuffix ~/ "/inject2") and (request.verb = "POST")</Condition>
     </Flow>
 
     <Flow name="unknown">

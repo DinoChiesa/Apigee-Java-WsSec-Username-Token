@@ -36,7 +36,7 @@ environment-wide or organization-wide jar via the Apigee administrative API.
 
 ## Details
 
-There is a single jar, apigee-wssecusernametoken-20231211.jar . Within that jar,
+There is a single jar, apigee-wssecusernametoken-20231212.jar . Within that jar,
 there is a single callout classes:
 
 * com.google.apigee.callouts.wssecusernametoken.Inject
@@ -71,9 +71,10 @@ Configure the policy this way:
     <Property name='output-variable'>output</Property>
     <Property name='username'>{my_username}</Property>
     <Property name='password'>{my_password}</Property>
+    <Property name='password-encoding'>digest</Property>
   </Properties>
   <ClassName>com.google.apigee.callouts.wssecusernametoken.Inject</ClassName>
-  <ResourceURL>java://apigee-wssecusernametoken-20200409.jar</ResourceURL>
+  <ResourceURL>java://apigee-wssecusernametoken-20231212.jar</ResourceURL>
 </JavaCallout>
 ```
 
@@ -85,7 +86,7 @@ The properties are:
 | `output-variable`    | optional. the variable name in which to write the signed XML. Defaults to message.content |
 | `username`           | required. the username to use within the UsernameToken |
 | `password`           | required. the password to use within the UsernameToken |
-| `password-encoding`  | optional. One of: DIGEST, TEXT. If Digest, then the password is encoded as Base64(SHA1(nonce+created+password)) |
+| `password-encoding`  | optional. One of: DIGEST, TEXT. (case insensitive) If Digest, then the password is encoded as Base64(SHA1(nonce+created+password)) |
 
 
 See [the example API proxy included here](./bundle) for a working example of this policy configurations.
@@ -103,20 +104,28 @@ There are some sample SOAP request documents included in this repo that you can 
 
 ### Invoking the Example proxy:
 
-* Injecting a UsernameToken with a plaintext password
+* Injecting a UsernameToken with a plaintext password, into a SOAP 1.1 message
 
    ```
    apigee=https://my-apigee-endpoint
    curl -i $apigee/wssec-username/inject1  -H content-type:application/xml \
-       --data-binary @./sample-data/request1.xml
+       --data-binary @./sample-data/request1-soap1_1.xml
    ```
-   
-* Injecting a UsernameToken with a password digest
+
+* Injecting a UsernameToken with a password digest, into a SOAP 1.1 message
 
    ```
    apigee=https://my-apigee-endpoint
    curl -i $apigee/wssec-username/inject2  -H content-type:application/xml \
-       --data-binary @./sample-data/request1.xml
+       --data-binary @./sample-data/request1-soap1_1.xml
+   ```
+
+* Injecting a UsernameToken with a password digest, into a SOAP 1.2 message
+
+   ```
+   apigee=https://my-apigee-endpoint
+   curl -i $apigee/wssec-username/inject2  -H content-type:application/xml \
+       --data-binary @./sample-data/request2-soap1_2.xml
    ```
 
 ### Before and After Example
@@ -167,4 +176,6 @@ the modified payload looks like this:
 
 ## Bugs
 
-none?
+* restriction: Always uses WSSE 1.0. No support for WSSE1.1
+* restriction: Cannot inject a SecurityTokenReference
+* restriction: Always uses nonce+created+password for the basis of the password hash

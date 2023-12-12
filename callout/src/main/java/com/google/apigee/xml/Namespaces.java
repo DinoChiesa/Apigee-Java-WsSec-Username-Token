@@ -1,4 +1,4 @@
-// Copyright 2019-2022 Google LLC.
+// Copyright 2019-2023 Google LLC.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,7 +17,9 @@ package com.google.apigee.xml;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
@@ -25,22 +27,41 @@ import org.w3c.dom.Node;
 public class Namespaces {
   public static final String WSU =
       "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd";
-  public static final String SOAP10 = "http://schemas.xmlsoap.org/soap/envelope/";
-  public static final String WSSEC =
+  public static final String SOAP11 = "http://schemas.xmlsoap.org/soap/envelope/";
+  public static final String SOAP12 = "http://www.w3.org/2003/05/soap-envelope";
+  public static final String WSSE =
       "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd";
+  public static final String WSSE11 =
+      "http://docs.oasis-open.org/wss/2005/xx/oasis-2005xx-wss-wssecurity-secext-1.1.xsd";
   public static final String XMLNS = "http://www.w3.org/2000/xmlns/";
   public static final String XMLDSIG = "http://www.w3.org/2000/09/xmldsig#";
 
   public static final Map<String, String> defaultPrefixes;
+  public static final Set<String> soapNamespaces;
+
+  public static final String USERNAMETOKEN_PASSWORDTEXT =
+      "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText";
+  public static final String USERNAMETOKEN_PASSWORDDIGEST =
+      "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordDigest";
+  public static final String BASE64BINARY =
+      "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary";
 
   static {
     Map<String, String> map1 = new HashMap<String, String>();
     map1.put(WSU, "wsu");
-    map1.put(SOAP10, "soap10");
-    map1.put(WSSEC, "wssec");
+    map1.put(SOAP11, "soap");
+    map1.put(SOAP12, "soap");
+    map1.put(WSSE, "wsse");
+    map1.put(WSSE11, "wsse11");
     map1.put(XMLDSIG, "ds");
-
     defaultPrefixes = Collections.synchronizedMap(map1);
+  }
+
+  static {
+    Set<String> set1 = new HashSet<String>();
+    set1.add(SOAP11);
+    set1.add(SOAP12);
+    soapNamespaces = Collections.unmodifiableSet(set1);
   }
 
   public static Map<String, String> getExistingNamespaces(Element element) {

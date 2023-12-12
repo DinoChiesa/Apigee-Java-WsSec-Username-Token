@@ -1,0 +1,19 @@
+<soap:Envelope xmlns:soap='http://www.w3.org/2003/05/soap-envelope'
+               xmlns:ns='http://xmlns.example.com/Schemas/Common/header/1.0.0'
+               xmlns:v1='http://www.example.com/schemas/storeops/tux/reservation/v1'>
+  <soap:Header>
+    <ns:Header>
+      <ns:Source>Web</ns:Source>
+      <ns:Domain>STOREOPS</ns:Domain>
+      <ns:UserID>DFGH18</ns:UserID>
+      <ns:Password>TEST123</ns:Password>
+      <ns:Version>1.0</ns:Version>
+      <ns:IPAddress>123.45.67.89</ns:IPAddress>
+    </ns:Header>
+  </soap:Header>
+  <soap:Body>
+    <v1:GetReservationRequest>
+      <v1:ID>115097597</v1:ID>
+    </v1:GetReservationRequest>
+  </soap:Body>
+</soap:Envelope>

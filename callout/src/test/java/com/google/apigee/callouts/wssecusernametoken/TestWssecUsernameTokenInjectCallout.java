@@ -35,11 +35,33 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 public class TestWssecUsernameTokenInjectCallout extends CalloutTestBase {
-  private static final String simpleSoap1 =
+  private static final String simpleSoap11 =
       "<soapenv:Envelope xmlns:ns1='http://ws.example.com/'"
           + " xmlns:soapenv='http://schemas.xmlsoap.org/soap/envelope/'>  <soapenv:Body>   "
           + " <ns1:sumResponse>      <ns1:return>9</ns1:return>    </ns1:sumResponse> "
           + " </soapenv:Body></soapenv:Envelope>";
+
+  private static final String simpleSoap12 =
+      "<soap:Envelope xmlns:soap='http://www.w3.org/2003/05/soap-envelope'\n"
+          + "               xmlns:ns='http://xmlns.example.com/Schemas/Common/header/1.0.0'\n"
+          + "              "
+          + " xmlns:v1='http://www.example.com/schemas/storeops/tux/reservation/v1'>\n"
+          + "  <soap:Header>\n"
+          + "    <ns:Header>\n"
+          + "      <ns:Source>Web</ns:Source>\n"
+          + "      <ns:Domain>STOREOPS</ns:Domain>\n"
+          + "      <ns:UserID>DFGH18</ns:UserID>\n"
+          + "      <ns:Password>TEST123</ns:Password>\n"
+          + "      <ns:Version>1.0</ns:Version>\n"
+          + "      <ns:IPAddress>123.45.67.89</ns:IPAddress>\n"
+          + "    </ns:Header>\n"
+          + "  </soap:Header>\n"
+          + "  <soap:Body>\n"
+          + "    <v1:GetReservationRequest>\n"
+          + "      <v1:ID>115097597</v1:ID>\n"
+          + "    </v1:GetReservationRequest>\n"
+          + "  </soap:Body>\n"
+          + "</soap:Envelope>\n";
 
   private static Document docFromStream(InputStream inputStream)
       throws IOException, ParserConfigurationException, SAXException {
@@ -53,7 +75,7 @@ public class TestWssecUsernameTokenInjectCallout extends CalloutTestBase {
   public void emptySource() throws Exception {
     String method = "emptySource() ";
     String expectedError = "source variable resolves to null";
-    msgCtxt.setVariable("message-content", simpleSoap1);
+    msgCtxt.setVariable("message-content", simpleSoap11);
 
     Map<String, String> props = new HashMap<String, String>();
     props.put("source", "not-message.content");
@@ -76,7 +98,7 @@ public class TestWssecUsernameTokenInjectCallout extends CalloutTestBase {
     String method = "missingUsername() ";
     String expectedError = "username resolves to an empty string";
 
-    msgCtxt.setVariable("message.content", simpleSoap1);
+    msgCtxt.setVariable("message.content", simpleSoap11);
 
     Map<String, String> props = new HashMap<String, String>();
     props.put("source", "message.content");
@@ -100,7 +122,7 @@ public class TestWssecUsernameTokenInjectCallout extends CalloutTestBase {
   public void missingPassword() throws Exception {
     String method = "missingPassword() ";
     String expectedError = "password resolves to an empty string";
-    msgCtxt.setVariable("message.content", simpleSoap1);
+    msgCtxt.setVariable("message.content", simpleSoap11);
     msgCtxt.setVariable("my-username", "emil@gaffanon.com");
 
     Map<String, String> props = new HashMap<String, String>();
@@ -128,7 +150,7 @@ public class TestWssecUsernameTokenInjectCallout extends CalloutTestBase {
     final String appliedUsername = "emil@gaffanon.com";
     final String appliedPassword = "Albatross1";
     String method = "validResult() ";
-    msgCtxt.setVariable("message.content", simpleSoap1);
+    msgCtxt.setVariable("message.content", simpleSoap11);
     msgCtxt.setVariable("my-username", appliedUsername);
     msgCtxt.setVariable("my-password", appliedPassword);
 
@@ -157,26 +179,26 @@ public class TestWssecUsernameTokenInjectCallout extends CalloutTestBase {
     Document doc = docFromStream(new ByteArrayInputStream(output.getBytes(StandardCharsets.UTF_8)));
 
     // token
-    NodeList nl = doc.getElementsByTagNameNS(Namespaces.WSSEC, "UsernameToken");
+    NodeList nl = doc.getElementsByTagNameNS(Namespaces.WSSE, "UsernameToken");
     Assert.assertEquals(nl.getLength(), 1, method + "UsernameToken element");
     Element usernameToken = (Element) nl.item(0);
 
     // username
-    nl = usernameToken.getElementsByTagNameNS(Namespaces.WSSEC, "Username");
+    nl = usernameToken.getElementsByTagNameNS(Namespaces.WSSE, "Username");
     Assert.assertEquals(nl.getLength(), 1, method + "Username element");
     Element element = (Element) nl.item(0);
     String username = element.getTextContent();
     Assert.assertEquals(username, appliedUsername);
 
     // password
-    nl = usernameToken.getElementsByTagNameNS(Namespaces.WSSEC, "Password");
+    nl = usernameToken.getElementsByTagNameNS(Namespaces.WSSE, "Password");
     Assert.assertEquals(nl.getLength(), 1, method + "Password element");
     element = (Element) nl.item(0);
     String password = element.getTextContent();
     Assert.assertEquals(password, appliedPassword);
 
     // Nonce
-    nl = usernameToken.getElementsByTagNameNS(Namespaces.WSSEC, "Nonce");
+    nl = usernameToken.getElementsByTagNameNS(Namespaces.WSSE, "Nonce");
     Assert.assertEquals(nl.getLength(), 1, method + "Nonce element");
 
     // Created
@@ -189,7 +211,7 @@ public class TestWssecUsernameTokenInjectCallout extends CalloutTestBase {
     final String appliedUsername = "emil@gaffanon.com";
     final String appliedPassword = "Albatross1";
     String method = "validResult() ";
-    msgCtxt.setVariable("message.content", simpleSoap1);
+    msgCtxt.setVariable("message.content", simpleSoap11);
     msgCtxt.setVariable("my-username", appliedUsername);
     msgCtxt.setVariable("my-password", appliedPassword);
     msgCtxt.setVariable("my-password-encoding", "DIGEST");
@@ -220,19 +242,19 @@ public class TestWssecUsernameTokenInjectCallout extends CalloutTestBase {
     Document doc = docFromStream(new ByteArrayInputStream(output.getBytes(StandardCharsets.UTF_8)));
 
     // token
-    NodeList nl = doc.getElementsByTagNameNS(Namespaces.WSSEC, "UsernameToken");
+    NodeList nl = doc.getElementsByTagNameNS(Namespaces.WSSE, "UsernameToken");
     Assert.assertEquals(nl.getLength(), 1, method + "UsernameToken element");
     Element usernameToken = (Element) nl.item(0);
 
     // username
-    nl = usernameToken.getElementsByTagNameNS(Namespaces.WSSEC, "Username");
+    nl = usernameToken.getElementsByTagNameNS(Namespaces.WSSE, "Username");
     Assert.assertEquals(nl.getLength(), 1, method + "Username element");
     Element element = (Element) nl.item(0);
     String username = element.getTextContent();
     Assert.assertEquals(username, appliedUsername);
 
     // password
-    nl = usernameToken.getElementsByTagNameNS(Namespaces.WSSEC, "Password");
+    nl = usernameToken.getElementsByTagNameNS(Namespaces.WSSE, "Password");
     Assert.assertEquals(nl.getLength(), 1, method + "Password element");
     element = (Element) nl.item(0);
     String resultingPasswordText = element.getTextContent();
@@ -241,7 +263,7 @@ public class TestWssecUsernameTokenInjectCallout extends CalloutTestBase {
     Assert.assertTrue(passwordType.endsWith("Digest"));
 
     // Nonce
-    nl = usernameToken.getElementsByTagNameNS(Namespaces.WSSEC, "Nonce");
+    nl = usernameToken.getElementsByTagNameNS(Namespaces.WSSE, "Nonce");
     Assert.assertEquals(nl.getLength(), 1, method + "Nonce element");
     String nonce = ((Element) (nl.item(0))).getTextContent();
 
@@ -256,5 +278,66 @@ public class TestWssecUsernameTokenInjectCallout extends CalloutTestBase {
             .encodeToString(
                 MessageDigest.getInstance("SHA1").digest(s.getBytes(StandardCharsets.UTF_8)));
     Assert.assertEquals(resultingPasswordText, computedPasswordDigest);
+  }
+
+  @Test
+  public void validResult_soap12() throws Exception {
+    final String appliedUsername = "emil@gaffanon.com";
+    final String appliedPassword = "Albatross1";
+    String method = "validResult_soap12() ";
+    msgCtxt.setVariable("message.content", simpleSoap12);
+    msgCtxt.setVariable("my-username", appliedUsername);
+    msgCtxt.setVariable("my-password", appliedPassword);
+
+    Map<String, String> props = new HashMap<String, String>();
+    props.put("debug", "true");
+    props.put("source", "message.content");
+    props.put("username", "{my-username}");
+    props.put("password", "{my-password}");
+    props.put("output-variable", "output");
+
+    Inject callout = new Inject(props);
+
+    // execute and retrieve output
+    ExecutionResult actualResult = callout.execute(msgCtxt, exeCtxt);
+    Assert.assertEquals(actualResult, ExecutionResult.SUCCESS, "result not as expected");
+    Object exception = msgCtxt.getVariable("wssec_exception");
+    Assert.assertNull(exception, method + "exception");
+    Object errorOutput = msgCtxt.getVariable("wssec_error");
+    Assert.assertNull(errorOutput, "error not as expected");
+    Object stacktrace = msgCtxt.getVariable("wssec_stacktrace");
+    Assert.assertNull(stacktrace, method + "stacktrace");
+
+    String output = (String) msgCtxt.getVariable("output");
+    System.out.printf("** Output:\n" + output + "\n");
+
+    Document doc = docFromStream(new ByteArrayInputStream(output.getBytes(StandardCharsets.UTF_8)));
+
+    // token
+    NodeList nl = doc.getElementsByTagNameNS(Namespaces.WSSE, "UsernameToken");
+    Assert.assertEquals(nl.getLength(), 1, method + "UsernameToken element");
+    Element usernameToken = (Element) nl.item(0);
+
+    // username
+    nl = usernameToken.getElementsByTagNameNS(Namespaces.WSSE, "Username");
+    Assert.assertEquals(nl.getLength(), 1, method + "Username element");
+    Element element = (Element) nl.item(0);
+    String username = element.getTextContent();
+    Assert.assertEquals(username, appliedUsername);
+
+    // password
+    nl = usernameToken.getElementsByTagNameNS(Namespaces.WSSE, "Password");
+    Assert.assertEquals(nl.getLength(), 1, method + "Password element");
+    element = (Element) nl.item(0);
+    String password = element.getTextContent();
+    Assert.assertEquals(password, appliedPassword);
+
+    // Nonce
+    nl = usernameToken.getElementsByTagNameNS(Namespaces.WSSE, "Nonce");
+    Assert.assertEquals(nl.getLength(), 1, method + "Nonce element");
+
+    // Created
+    nl = usernameToken.getElementsByTagNameNS(Namespaces.WSU, "Created");
+    Assert.assertEquals(nl.getLength(), 1, method + "Created element");
   }
 }

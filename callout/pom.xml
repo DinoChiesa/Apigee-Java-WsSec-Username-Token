@@ -5,7 +5,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.google.apigee.callouts</groupId>
   <artifactId>apigee-wssecusernametoken</artifactId>
-  <version>20231211</version>
+  <version>20231212</version>
   <name>ApigeeJavaWssecUsernameToken</name>
   <url>http://maven.apache.org</url>
   <packaging>jar</packaging>

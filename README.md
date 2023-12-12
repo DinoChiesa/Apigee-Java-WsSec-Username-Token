@@ -10,7 +10,7 @@ This example is not an official Google product, nor is it part of an official Go
 
 ## License
 
-This material is Copyright 2018-2022, Google LLC.
+This material is Copyright 2018-2023, Google LLC.
 and is licensed under the Apache 2.0 license. See the [LICENSE](LICENSE) file.
 
 This code is open source but you don't need to compile it in order to use it.
@@ -21,8 +21,8 @@ You do not need to build the callout in order to use it.
 
 If you do wish to build it, you must use [maven](https://maven.apache.org/) to
 build and package the jar. You need maven v3.5 at a minimum. The callout builds
-with java8. It will not build with a later JDK, because of a depedency on
-JMockit which requires Java8.
+with Java 8. It will not build with a later JDK, because of a depedency on
+JMockit which requires Java 8.
 
 ```
 mvn clean package
@@ -36,7 +36,7 @@ environment-wide or organization-wide jar via the Apigee administrative API.
 
 ## Details
 
-There is a single jar, apigee-wssecusernametoken-20210409.jar . Within that jar,
+There is a single jar, apigee-wssecusernametoken-20231211.jar . Within that jar,
 there is a single callout classes:
 
 * com.google.apigee.callouts.wssecusernametoken.Inject
@@ -81,10 +81,11 @@ The properties are:
 
 | name                 | description |
 | -------------------- | ------------ |
-| source               | optional. the variable name in which to obtain the source document to sign. Defaults to message.content |
-| output-variable      | optional. the variable name in which to write the signed XML. Defaults to message.content |
-| username             | required. the username to inject |
-| password             | required. the password to inject |
+| `source`             | optional. the variable name in which to obtain the source document to sign. Defaults to message.content |
+| `output-variable`    | optional. the variable name in which to write the signed XML. Defaults to message.content |
+| `username`           | required. the username to use within the UsernameToken |
+| `password`           | required. the password to use within the UsernameToken |
+| `password-encoding`  | optional. One of: DIGEST, TEXT. If Digest, then the password is encoded as Base64(SHA1(nonce+created+password)) |
 
 
 See [the example API proxy included here](./bundle) for a working example of this policy configurations.
@@ -92,18 +93,29 @@ See [the example API proxy included here](./bundle) for a working example of thi
 
 ## Example API Proxy Bundle
 
-Deploy the API Proxy to an organization and environment using a tool like [importAndDeploy.js](https://github.com/DinoChiesa/apigee-edge-js/blob/master/examples/importAndDeploy.js)
+Import and Deploy the API Proxy to an organization and environment using a tool like [apigeecli](https://github.com/apigee/apigeecli/blob/main/docs/apigeecli.md)
+```sh
+apigeecli apis create bundle -f apiproxy --name wssec-username -o $ORG --token $TOKEN
+apigeecli apis deploy --wait --name wssec-username --ovr --org $ORG --env $ENV --token $TOKEN
+```
 
 There are some sample SOAP request documents included in this repo that you can use for demonstrations.
 
 ### Invoking the Example proxy:
 
-* Injecting a username token
+* Injecting a UsernameToken with a plaintext password
 
    ```
-   ORG=myorgname
-   ENV=myenv
-   curl -i https://${ORG}-${ENV}.apigee.net/wssec-username/inject  -H content-type:application/xml \
+   apigee=https://my-apigee-endpoint
+   curl -i $apigee/wssec-username/inject1  -H content-type:application/xml \
+       --data-binary @./sample-data/request1.xml
+   ```
+   
+* Injecting a UsernameToken with a password digest
+
+   ```
+   apigee=https://my-apigee-endpoint
+   curl -i $apigee/wssec-username/inject2  -H content-type:application/xml \
        --data-binary @./sample-data/request1.xml
    ```
 

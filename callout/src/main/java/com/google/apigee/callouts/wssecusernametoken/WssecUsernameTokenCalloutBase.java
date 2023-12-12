@@ -1,4 +1,4 @@
-// Copyright 2018-2021 Google LLC
+// Copyright 2018-2023 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,26 +17,11 @@ package com.google.apigee.callouts.wssecusernametoken;
 
 import com.apigee.flow.message.MessageContext;
 import com.google.apigee.util.XmlUtils;
-import java.io.ByteArrayInputStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.nio.charset.StandardCharsets;
-import java.security.KeyException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.Certificate;
-import java.security.cert.CertificateEncodingException;
-import java.security.cert.CertificateFactory;
-import java.security.cert.X509Certificate;
-import java.util.Base64;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javax.naming.InvalidNameException;
-import javax.naming.ldap.LdapName;
-import javax.naming.ldap.Rdn;
-import javax.security.auth.x500.X500Principal;
-import javax.xml.bind.DatatypeConverter;
 import org.w3c.dom.Document;
 
 public abstract class WssecUsernameTokenCalloutBase {
@@ -84,8 +69,23 @@ public abstract class WssecUsernameTokenCalloutBase {
     return dest;
   }
 
-  protected String getSimpleOptionalProperty(String propName, MessageContext msgCtxt)
-       {
+  enum PasswordEncoding {
+    NOT_SPECIFIED,
+    TEXT,
+    DIGEST
+  }
+
+  protected PasswordEncoding getPasswordEncoding(MessageContext msgCtxt) {
+    String encodingString = getSimpleOptionalProperty("password-encoding", msgCtxt);
+    if (encodingString == null) return PasswordEncoding.TEXT;
+    encodingString = encodingString.trim().toUpperCase();
+    if (encodingString.equals("TEXT")) return PasswordEncoding.TEXT;
+    if (encodingString.equals("DIGEST")) return PasswordEncoding.DIGEST;
+    msgCtxt.setVariable(varName("warning"), "unrecognized password-encoding");
+    return PasswordEncoding.TEXT;
+  }
+
+  protected String getSimpleOptionalProperty(String propName, MessageContext msgCtxt) {
     String value = (String) this.properties.get(propName);
     if (value == null) {
       return null;
@@ -102,7 +102,7 @@ public abstract class WssecUsernameTokenCalloutBase {
   }
 
   protected String getSimpleRequiredProperty(String propName, MessageContext msgCtxt)
-    throws IllegalStateException {
+      throws IllegalStateException {
     String value = (String) this.properties.get(propName);
     if (value == null) {
       throw new IllegalStateException(propName + " resolves to an empty string");
@@ -155,13 +155,12 @@ public abstract class WssecUsernameTokenCalloutBase {
   }
 
   protected void setExceptionVariables(Exception exc1, MessageContext msgCtxt) {
-    String error = exc1.toString().replaceAll("\n"," ");
+    String error = exc1.toString().replaceAll("\n", " ");
     msgCtxt.setVariable(varName("exception"), error);
     Matcher matcher = commonErrorPattern.matcher(error);
     if (matcher.matches()) {
       msgCtxt.setVariable(varName("error"), matcher.group(2));
-    }
-    else {
+    } else {
       msgCtxt.setVariable(varName("error"), error);
     }
   }

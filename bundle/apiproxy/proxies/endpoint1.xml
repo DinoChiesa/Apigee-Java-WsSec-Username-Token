@@ -1,4 +1,4 @@
-<ProxyEndpoint name='endpoint1'>
+<ProxyEndpoint name="endpoint1">
   <Description>Proxy for Java callout for WS-Security UsernameToken</Description>
   <HTTPProxyConnection>
     <BasePath>/wssec-username</BasePath>
@@ -7,51 +7,83 @@
   </HTTPProxyConnection>
 
   <FaultRules/>
+  <DefaultFaultRule>
+    <AlwaysEnforce>true</AlwaysEnforce>
+    <Step>
+      <Name>AM-Inject-Proxy-Revision-Header</Name>
+    </Step>
+  </DefaultFaultRule>
 
   <PreFlow name="PreFlow">
-      <Request/>
-      <Response>
-      </Response>
+    <Request/>
+    <Response>
+
+      <Step>
+        <Name>AM-Clean-Request-Headers-From-Response</Name>
+      </Step>
+    </Response>
   </PreFlow>
 
   <PostFlow name="PostFlow">
-      <Request/>
-      <Response>
-      </Response>
+    <Request/>
+    <Response>
+
+      <Step>
+        <Name>AM-Inject-Proxy-Revision-Header</Name>
+      </Step>
+    </Response>
   </PostFlow>
 
   <Flows>
-    <Flow name='inject'>
+    <Flow name="inject1">
       <Request>
         <Step>
           <Condition>NOT((request.header.content-type =| "text/xml") OR (request.header.content-type =| "application/xml" ))</Condition>
-          <Name>RF-InvalidRequest</Name>
+          <Name>RF-Invalid-Request</Name>
         </Step>
       </Request>
       <Response>
-        <Step><Name>Java-WSSEC-Inject-Username</Name></Step>
-        <Step><Name>AM-Response</Name></Step>
+        <Step>
+          <Name>Java-WSSEC-Inject-UsernameToken-with-Plaintext-Password</Name>
+        </Step>
+        <Step>
+          <Name>AM-Response</Name>
+        </Step>
       </Response>
-      <Condition>(proxy.pathsuffix ~ "/inject") and (request.verb = "POST")</Condition>
+      <Condition>(proxy.pathsuffix ~ "/inject1") and (request.verb = "POST")</Condition>
     </Flow>
 
+    <Flow name="inject2">
+      <Request>
+        <Step>
+          <Condition>NOT((request.header.content-type =| "text/xml") OR (request.header.content-type =| "application/xml" ))</Condition>
+          <Name>RF-Invalid-Request</Name>
+        </Step>
+      </Request>
+      <Response>
+        <Step>
+          <Name>Java-WSSEC-Inject-UsernameToken-with-Password-Digest</Name>
+        </Step>
+        <Step>
+          <Name>AM-Response</Name>
+        </Step>
+      </Response>
+      <Condition>(proxy.pathsuffix ~ "/inject2") and (request.verb = "POST")</Condition>
+    </Flow>
 
-    <Flow name='unknown'>
-      <!--
-           applies as a "default" flow, in case none of the conditions
-           for the above flows evaluated to true.
-      -->
+    <Flow name="unknown">
       <Description>Unknown request</Description>
       <Request>
-        <Step><Name>RF-UnknownRequest</Name></Step>
+        <Step>
+          <Name>RF-Unknown-Request</Name>
+        </Step>
       </Request>
       <Response/>
     </Flow>
 
   </Flows>
 
-  <RouteRule name='LoopbackRoute'>
-    <!-- no target! no backend call -->
+  <RouteRule name="LoopbackRoute">
   </RouteRule>
 
 </ProxyEndpoint>

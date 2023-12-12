@@ -3,9 +3,9 @@
          xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>com.google.apigee.edgecallouts</groupId>
+  <groupId>com.google.apigee.callouts</groupId>
   <artifactId>apigee-wssecusernametoken</artifactId>
-  <version>20210409</version>
+  <version>20231211</version>
   <name>ApigeeJavaWssecUsernameToken</name>
   <url>http://maven.apache.org</url>
   <packaging>jar</packaging>

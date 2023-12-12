@@ -1,4 +1,4 @@
-// Copyright 2018-2021 Google LLC
+// Copyright 2018-2023 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import com.apigee.flow.message.MessageContext;
 import com.google.apigee.xml.Namespaces;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.ZoneOffset;
@@ -121,6 +122,8 @@ public class Inject extends WssecUsernameTokenCalloutBase implements Execution {
 
   private String injectToken(Document doc, PolicyConfiguration policyConfiguration)
       throws NoSuchAlgorithmException, TransformerConfigurationException, TransformerException {
+
+    // 0. grab the Envelope and Body elements
     String soapns = Namespaces.SOAP10;
 
     NodeList nodes = doc.getElementsByTagNameNS(soapns, "Envelope");
@@ -136,12 +139,20 @@ public class Inject extends WssecUsernameTokenCalloutBase implements Execution {
 
     Element body = (Element) nodes.item(0);
 
+    // 1. set up the map of namespaces
     Map<String, String> knownNamespaces = Namespaces.getExistingNamespaces(envelope);
     String wsuPrefix = declareXmlnsPrefix(envelope, knownNamespaces, Namespaces.WSU);
     String soapPrefix = declareXmlnsPrefix(envelope, knownNamespaces, Namespaces.SOAP10);
     String wssePrefix = declareXmlnsPrefix(envelope, knownNamespaces, Namespaces.WSSEC);
 
-    // 1. create or get the soap:Header
+    // 2. create a nonce and createdTime, we'll need these later
+    Element nonce = doc.createElementNS(Namespaces.WSSEC, wssePrefix + ":Nonce");
+    final byte[] nonceBytes = new byte[20];
+    SecureRandom.getInstanceStrong().nextBytes(nonceBytes);
+    String encodedNonce = Base64.getEncoder().encodeToString(nonceBytes);
+    String createdTime = getISOTimestamp(0);
+
+    // 3. create or get the soap:Header
     Element header = null;
     nodes = doc.getElementsByTagNameNS(soapns, "Header");
     if (nodes.getLength() == 0) {
@@ -151,7 +162,7 @@ public class Inject extends WssecUsernameTokenCalloutBase implements Execution {
       header = (Element) nodes.item(0);
     }
 
-    // 2. create or get the WS-Security element within the header
+    // 4. create or get the WS-Security element within the header
     Element wssecHeader = null;
     nodes = header.getElementsByTagNameNS(Namespaces.WSSEC, "Security");
     if (nodes.getLength() == 0) {
@@ -162,42 +173,53 @@ public class Inject extends WssecUsernameTokenCalloutBase implements Execution {
       wssecHeader = (Element) nodes.item(0);
     }
 
-    // 3. embed a UsernameToken element under the wssecHeader element
+    // 5. embed a UsernameToken element under the wssecHeader element
     Element usernameToken = doc.createElementNS(Namespaces.WSSEC, wssePrefix + ":UsernameToken");
     String tokenId = "UsernameToken-" + java.util.UUID.randomUUID().toString();
     usernameToken.setAttributeNS(Namespaces.WSU, wsuPrefix + ":Id", tokenId);
     usernameToken.setIdAttributeNS(Namespaces.WSU, "Id", true);
     wssecHeader.appendChild(usernameToken);
 
-    // 4. add the username and password
+    // 6. add the username
     Element username = doc.createElementNS(Namespaces.WSSEC, wssePrefix + ":Username");
     username.setTextContent(policyConfiguration.username);
     usernameToken.appendChild(username);
 
+    // 7. add the password, digest or plain text
     Element password = doc.createElementNS(Namespaces.WSSEC, wssePrefix + ":Password");
-    password.setAttribute(
-        "Type",
-        "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText");
-    password.setTextContent(policyConfiguration.password);
+    if (policyConfiguration.passwordEncoding == PasswordEncoding.DIGEST) {
+      password.setAttribute(
+          "Type",
+          "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordDigest");
+
+      String aggregate = encodedNonce + createdTime + policyConfiguration.password;
+      String passwordDigest =
+          Base64.getEncoder()
+              .encodeToString(
+                  MessageDigest.getInstance("SHA1")
+                      .digest(aggregate.getBytes(StandardCharsets.UTF_8)));
+      password.setTextContent(passwordDigest);
+    } else {
+      password.setAttribute(
+          "Type",
+          "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText");
+      password.setTextContent(policyConfiguration.password);
+    }
     usernameToken.appendChild(password);
 
-    // 5. embed a Created element under UsernameToken
+    // 8. embed a Created element under UsernameToken
     Element created = doc.createElementNS(Namespaces.WSU, wsuPrefix + ":Created");
-    created.setTextContent(getISOTimestamp(0));
+    created.setTextContent(createdTime);
     usernameToken.appendChild(created);
 
-    // 6. embed a Nonce
-    Element nonce = doc.createElementNS(Namespaces.WSSEC, wssePrefix + ":Nonce");
-    final byte[] nonceBytes = new byte[20];
-    SecureRandom.getInstanceStrong().nextBytes(nonceBytes);
-    String encodedNonce = Base64.getEncoder().encodeToString(nonceBytes);
+    // 9. embed the Nonce
     nonce.setTextContent(encodedNonce);
     nonce.setAttribute(
         "EncodingType",
         "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary");
     usernameToken.appendChild(nonce);
 
-    // emit the resulting document
+    // 10. emit the resulting document
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     Transformer transformer = TransformerFactory.newInstance().newTransformer();
     transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
@@ -208,6 +230,7 @@ public class Inject extends WssecUsernameTokenCalloutBase implements Execution {
   static class PolicyConfiguration {
     public String username; // required
     public String password; // required
+    public PasswordEncoding passwordEncoding;
 
     public PolicyConfiguration withUsername(String username) {
       this.username = username;
@@ -216,6 +239,11 @@ public class Inject extends WssecUsernameTokenCalloutBase implements Execution {
 
     public PolicyConfiguration withPassword(String password) {
       this.password = password;
+      return this;
+    }
+
+    public PolicyConfiguration withPasswordEncoding(PasswordEncoding passwordEncoding) {
+      this.passwordEncoding = passwordEncoding;
       return this;
     }
   }
@@ -227,7 +255,8 @@ public class Inject extends WssecUsernameTokenCalloutBase implements Execution {
       PolicyConfiguration policyConfiguration =
           new PolicyConfiguration()
               .withUsername(getUsername(msgCtxt))
-              .withPassword(getPassword(msgCtxt));
+              .withPassword(getPassword(msgCtxt))
+              .withPasswordEncoding(getPasswordEncoding(msgCtxt));
 
       String resultingXmlString = injectToken(document, policyConfiguration);
       String outputVar = getOutputVar(msgCtxt);

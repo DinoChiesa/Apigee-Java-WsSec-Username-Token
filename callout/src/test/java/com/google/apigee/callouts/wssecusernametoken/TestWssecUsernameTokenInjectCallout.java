@@ -340,4 +340,104 @@ public class TestWssecUsernameTokenInjectCallout extends CalloutTestBase {
     nl = usernameToken.getElementsByTagNameNS(Namespaces.WSU, "Created");
     Assert.assertEquals(nl.getLength(), 1, method + "Created element");
   }
+
+  @Test
+  public void withTimestamp_soap12() throws Exception {
+    final String appliedUsername = "emil@gaffanon.com";
+    final String appliedPassword = "Albatross1";
+    String method = "withTimestamp_soap12() ";
+    msgCtxt.setVariable("message.content", simpleSoap12);
+    msgCtxt.setVariable("my-username", appliedUsername);
+    msgCtxt.setVariable("my-password", appliedPassword);
+
+    Map<String, String> props = new HashMap<String, String>();
+    props.put("debug", "true");
+    props.put("source", "message.content");
+    props.put("username", "{my-username}");
+    props.put("password", "{my-password}");
+    props.put("expiry", "300s");
+    props.put("output-variable", "output");
+
+    Inject callout = new Inject(props);
+
+    // execute and retrieve output
+    ExecutionResult actualResult = callout.execute(msgCtxt, exeCtxt);
+    Assert.assertEquals(actualResult, ExecutionResult.SUCCESS, "result not as expected");
+    Object exception = msgCtxt.getVariable("wssec_exception");
+    Assert.assertNull(exception, method + "exception");
+    Object errorOutput = msgCtxt.getVariable("wssec_error");
+    Assert.assertNull(errorOutput, "error not as expected");
+    Object stacktrace = msgCtxt.getVariable("wssec_stacktrace");
+    Assert.assertNull(stacktrace, method + "stacktrace");
+
+    String output = (String) msgCtxt.getVariable("output");
+    System.out.printf("** Output:\n" + output + "\n");
+
+    Document doc = docFromStream(new ByteArrayInputStream(output.getBytes(StandardCharsets.UTF_8)));
+
+    // timestamp
+    NodeList nl = doc.getElementsByTagNameNS(Namespaces.WSU, "Timestamp");
+    Assert.assertEquals(nl.getLength(), 1, method + "Timestamp element");
+    Element timestamp = (Element) nl.item(0);
+
+    // token
+    nl = doc.getElementsByTagNameNS(Namespaces.WSSE, "UsernameToken");
+    Assert.assertEquals(nl.getLength(), 1, method + "UsernameToken element");
+    Element usernameToken = (Element) nl.item(0);
+
+    // timestamp-created
+    nl = timestamp.getElementsByTagNameNS(Namespaces.WSU, "Created");
+    Assert.assertEquals(nl.getLength(), 1, method + "Timestamp/Created element");
+    Element timestampCreatedElement = (Element) nl.item(0);
+    String timestampCreated = timestampCreatedElement.getTextContent();
+    Assert.assertNotNull(timestampCreated, "timestampCreated");
+
+    // token-created
+    nl = usernameToken.getElementsByTagNameNS(Namespaces.WSU, "Created");
+    Assert.assertEquals(nl.getLength(), 1, method + "UsernameToken/Created element");
+    Element tokenCreatedElement = (Element) nl.item(0);
+    String tokenCreated = tokenCreatedElement.getTextContent();
+    Assert.assertNotNull(tokenCreated, "tokenCreated");
+
+    Assert.assertEquals(tokenCreated, timestampCreated);
+  }
+
+  @Test
+  public void withNoTimestamp_soap12() throws Exception {
+    final String appliedUsername = "emil@gaffanon.com";
+    final String appliedPassword = "Albatross1";
+    String method = "withTimestamp_soap12() ";
+    msgCtxt.setVariable("message.content", simpleSoap12);
+    msgCtxt.setVariable("my-username", appliedUsername);
+    msgCtxt.setVariable("my-password", appliedPassword);
+
+    Map<String, String> props = new HashMap<String, String>();
+    props.put("debug", "true");
+    props.put("source", "message.content");
+    props.put("username", "{my-username}");
+    props.put("password", "{my-password}");
+    // props.put("expiry", "300s");
+    props.put("output-variable", "output");
+
+    Inject callout = new Inject(props);
+
+    // execute and retrieve output
+    ExecutionResult actualResult = callout.execute(msgCtxt, exeCtxt);
+    Assert.assertEquals(actualResult, ExecutionResult.SUCCESS, "result not as expected");
+    Object exception = msgCtxt.getVariable("wssec_exception");
+    Assert.assertNull(exception, method + "exception");
+    Object errorOutput = msgCtxt.getVariable("wssec_error");
+    Assert.assertNull(errorOutput, "error not as expected");
+    Object stacktrace = msgCtxt.getVariable("wssec_stacktrace");
+    Assert.assertNull(stacktrace, method + "stacktrace");
+
+    String output = (String) msgCtxt.getVariable("output");
+    System.out.printf("** Output:\n" + output + "\n");
+
+    Document doc = docFromStream(new ByteArrayInputStream(output.getBytes(StandardCharsets.UTF_8)));
+
+    // timestamp
+    NodeList nl = doc.getElementsByTagNameNS(Namespaces.WSU, "Timestamp");
+    Assert.assertEquals(nl.getLength(), 0, method + "Timestamp element");
+  }
 }

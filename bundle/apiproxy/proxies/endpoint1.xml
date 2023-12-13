@@ -73,6 +73,25 @@
       <Condition>(proxy.pathsuffix ~/ "/inject2") and (request.verb = "POST")</Condition>
     </Flow>
 
+    <Flow name="inject3">
+      <Request>
+        <Step>
+          <Condition>NOT((request.header.content-type =| "text/xml") OR
+                         (request.header.content-type =| "application/xml" ))</Condition>
+          <Name>RF-Invalid-Request</Name>
+        </Step>
+        <Step>
+          <Name>Java-WSSEC-Inject-UsernameToken-with-Password-Digest-and-Timestamp</Name>
+        </Step>
+      </Request>
+      <Response>
+        <Step>
+          <Name>AM-Response</Name>
+        </Step>
+      </Response>
+      <Condition>(proxy.pathsuffix ~/ "/inject3") and (request.verb = "POST")</Condition>
+    </Flow>
+
     <Flow name="unknown">
       <Description>Unknown request</Description>
       <Request>

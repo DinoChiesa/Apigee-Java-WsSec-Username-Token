@@ -2,7 +2,7 @@
 
 This directory contains the Java source code and pom.xml file required
 to compile a simple Java callout for Apigee, that inserts a
-username token that complies with WS-Security standard into a SOAP message.
+UsernameToken that complies with WS-Security standard into a SOAP message.
 
 ## Disclaimer
 
@@ -13,7 +13,7 @@ This example is not an official Google product, nor is it part of an official Go
 This material is Copyright 2018-2023, Google LLC.
 and is licensed under the Apache 2.0 license. See the [LICENSE](LICENSE) file.
 
-This code is open source but you don't need to compile it in order to use it.
+This code is open source. You don't need to compile it in order to use it.
 
 ## Building
 
@@ -37,15 +37,16 @@ environment-wide or organization-wide jar via the Apigee administrative API.
 ## Details
 
 There is a single jar, apigee-wssecusernametoken-20231212.jar . Within that jar,
-there is a single callout classes:
+there is a single callout class:
 
 * com.google.apigee.callouts.wssecusernametoken.Inject
 
-Use this class to inject the username token into the input SOAP document.
-It also will insert a nonce and a timestamp.  The resulting header is like this:
+Use this class to inject the UsernameToken into the input SOAP document.  The
+UsernameToken will contain an automatically-generated Nonce and a Timestamp.
+The resulting header is like this:
 
 ```xml
- <wsse:UsernameToken wsu:Id="UsernameToken-33966159F436ED774C158171838890544">
+ <wsse:UsernameToken wsu:Id="UsernameToken-100">
     <wsse:Username>MyUser</wsse:Username>
     <wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText">MyPassword</wsse:Password>
     <wsse:Nonce EncodingType="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary">ID79BmTDQ5z2hLt4MQQ8RQ==</wsse:Nonce>
@@ -57,8 +58,7 @@ It also will insert a nonce and a timestamp.  The resulting header is like this:
 
 None.
 
-This Callout does not depend on WSS4J.  This callout is intended to be
-usable in Apigee Cloud.
+This callout is intended to be usable in Apigee Cloud (X or hybrid).
 
 ## Usage
 
@@ -86,10 +86,11 @@ The properties are:
 | `output-variable`    | optional. the variable name in which to write the signed XML. Defaults to message.content |
 | `username`           | required. the username to use within the UsernameToken |
 | `password`           | required. the password to use within the UsernameToken |
-| `password-encoding`  | optional. One of: DIGEST, TEXT. (case insensitive) If Digest, then the password is encoded as Base64(SHA1(nonce+created+password)) |
+| `password-encoding`  | optional. One of: DIGEST, TEXT (case insensitive). Defaults to TEXT. If Digest, then the password is encoded as Base64(SHA1(nonce+created+password)). If TEXT, the password is encoded directly, in plaintext.  |
+| `expiry`             | optional. a timespan expression, such as `180s`, `5m`, or `1h`, indicating 180 seconds, 5 minutes, or 1 hour respectively. If included and if it resolves to a timespan greater than zero, the callout will inject a `wsu:Timestamp` element into the document under the WS-Security `Header`, with `wsu:Created` and a `wsu:Expires` child elements. |
 
 
-See [the example API proxy included here](./bundle) for a working example of this policy configurations.
+See [the example API proxy included here](./bundle) for a working example showing some of the possible policy configurations.
 
 
 ## Example API Proxy Bundle
@@ -104,7 +105,7 @@ There are some sample SOAP request documents included in this repo that you can 
 
 ### Invoking the Example proxy:
 
-* Injecting a UsernameToken with a plaintext password, into a SOAP 1.1 message
+* Inject a UsernameToken with a plaintext password, into a SOAP 1.1 message
 
    ```
    apigee=https://my-apigee-endpoint
@@ -112,7 +113,7 @@ There are some sample SOAP request documents included in this repo that you can 
        --data-binary @./sample-data/request1-soap1_1.xml
    ```
 
-* Injecting a UsernameToken with a password digest, into a SOAP 1.1 message
+* Inject a UsernameToken with a password digest, into a SOAP 1.1 message
 
    ```
    apigee=https://my-apigee-endpoint
@@ -120,7 +121,7 @@ There are some sample SOAP request documents included in this repo that you can 
        --data-binary @./sample-data/request1-soap1_1.xml
    ```
 
-* Injecting a UsernameToken with a password digest, into a SOAP 1.2 message
+* Inject a UsernameToken with a password digest, into a SOAP 1.2 message
 
    ```
    apigee=https://my-apigee-endpoint
@@ -128,7 +129,15 @@ There are some sample SOAP request documents included in this repo that you can 
        --data-binary @./sample-data/request2-soap1_2.xml
    ```
 
-### Before and After Example
+* Inject a UsernameToken with a password digest, and an Timestamp+Expiry, into a SOAP 1.2 message
+
+   ```
+   apigee=https://my-apigee-endpoint
+   curl -i $apigee/wssec-username/inject3  -H content-type:application/xml \
+       --data-binary @./sample-data/request2-soap1_2.xml
+   ```
+
+### Before and After Payload Example
 
 Supposing the input XML looks like this:
 
@@ -144,8 +153,8 @@ Supposing the input XML looks like this:
 </soapenv:Envelope>
 ```
 
-Then,
-the modified payload looks like this:
+Then, if you use `password-encoding` of TEXT, and no `expiry`,
+the modified payload might look like this:
 
 ```xml
 <soapenv:Envelope

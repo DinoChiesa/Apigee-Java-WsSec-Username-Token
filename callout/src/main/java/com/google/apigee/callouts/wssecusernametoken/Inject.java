@@ -19,6 +19,7 @@ import com.apigee.flow.execution.ExecutionContext;
 import com.apigee.flow.execution.ExecutionResult;
 import com.apigee.flow.execution.spi.Execution;
 import com.apigee.flow.message.MessageContext;
+import com.google.apigee.util.TimeResolver;
 import com.google.apigee.xml.Namespaces;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
@@ -31,6 +32,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Map;
+import java.util.function.BiFunction;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerConfigurationException;
@@ -90,6 +92,9 @@ public class Inject extends WssecUsernameTokenCalloutBase implements Execution {
   //   return null;
   // }
 
+  java.util.concurrent.atomic.AtomicInteger idCounter =
+      new java.util.concurrent.atomic.AtomicInteger(100);
+
   private int nsCounter = 1;
 
   private String declareXmlnsPrefix(
@@ -112,6 +117,10 @@ public class Inject extends WssecUsernameTokenCalloutBase implements Execution {
     return prefix;
   }
 
+  private String randomId() {
+    return String.valueOf(idCounter.getAndIncrement());
+  }
+
   private static String getISOTimestamp(int offsetFromNow) {
     ZonedDateTime zdt = ZonedDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.SECONDS);
     if (offsetFromNow != 0) zdt = zdt.plusSeconds(offsetFromNow);
@@ -124,7 +133,6 @@ public class Inject extends WssecUsernameTokenCalloutBase implements Execution {
       throws NoSuchAlgorithmException, TransformerConfigurationException, TransformerException {
 
     // 0. grab the Envelope and Body elements
-
     Element root = doc.getDocumentElement();
     if (!"Envelope".equals(root.getLocalName())) {
       throw new IllegalStateException("Not a SOAP Envelope, incorrect root element.");
@@ -153,6 +161,14 @@ public class Inject extends WssecUsernameTokenCalloutBase implements Execution {
     String wsuPrefix = declareXmlnsPrefix(envelope, knownNamespaces, Namespaces.WSU);
     String soapPrefix = declareXmlnsPrefix(envelope, knownNamespaces, soapns);
     String wssePrefix = declareXmlnsPrefix(envelope, knownNamespaces, Namespaces.WSSE);
+
+    BiFunction<Element, String, String> wsuIdInjector =
+        (elt, prefix) -> {
+          String id = prefix + "-" + randomId();
+          elt.setAttributeNS(Namespaces.WSU, wsuPrefix + ":Id", id);
+          elt.setIdAttributeNS(Namespaces.WSU, "Id", true);
+          return id;
+        };
 
     // 2. create a nonce and createdTime, we'll need these later
     Element nonce = doc.createElementNS(Namespaces.WSSE, wssePrefix + ":Nonce");
@@ -187,19 +203,34 @@ public class Inject extends WssecUsernameTokenCalloutBase implements Execution {
       wssecHeader = (Element) nodes.item(0);
     }
 
-    // 5. embed a UsernameToken element under the wssecHeader element
+    // 5a. optionally embed a Timestamp element under the wssecHeader element
+    if (policyConfiguration.expiresInSeconds > 0) {
+      Element timestamp = doc.createElementNS(Namespaces.WSU, wsuPrefix + ":Timestamp");
+      wsuIdInjector.apply(timestamp, "TS");
+      wssecHeader.appendChild(timestamp);
+
+      // 5b. embed a Created element into the Timestamp
+      Element timestampCreated = doc.createElementNS(Namespaces.WSU, wsuPrefix + ":Created");
+      timestampCreated.setTextContent(createdTime);
+      timestamp.appendChild(timestampCreated);
+
+      // 5c. optionally, embed an Expires element into the Timestamp
+      Element expires = doc.createElementNS(Namespaces.WSU, wsuPrefix + ":Expires");
+      expires.setTextContent(getISOTimestamp(policyConfiguration.expiresInSeconds));
+      timestamp.appendChild(expires);
+    }
+
+    // 6. embed a UsernameToken element under the wssecHeader element
     Element usernameToken = doc.createElementNS(Namespaces.WSSE, wssePrefix + ":UsernameToken");
-    String tokenId = "UsernameToken-" + java.util.UUID.randomUUID().toString();
-    usernameToken.setAttributeNS(Namespaces.WSU, wsuPrefix + ":Id", tokenId);
-    usernameToken.setIdAttributeNS(Namespaces.WSU, "Id", true);
+    wsuIdInjector.apply(usernameToken, "UT");
     wssecHeader.appendChild(usernameToken);
 
-    // 6. add the username
+    // 7a. add the username
     Element username = doc.createElementNS(Namespaces.WSSE, wssePrefix + ":Username");
     username.setTextContent(policyConfiguration.username);
     usernameToken.appendChild(username);
 
-    // 7. add the password, digest or plain text
+    // 7b. add the password, digest or plain text
     Element password = doc.createElementNS(Namespaces.WSSE, wssePrefix + ":Password");
     if (policyConfiguration.passwordEncoding == PasswordEncoding.DIGEST) {
       password.setAttribute("Type", Namespaces.USERNAMETOKEN_PASSWORDDIGEST);
@@ -216,17 +247,17 @@ public class Inject extends WssecUsernameTokenCalloutBase implements Execution {
     }
     usernameToken.appendChild(password);
 
-    // 8. embed a Created element under UsernameToken
-    Element created = doc.createElementNS(Namespaces.WSU, wsuPrefix + ":Created");
-    created.setTextContent(createdTime);
-    usernameToken.appendChild(created);
+    // 7c. embed a Created element under UsernameToken
+    Element tokenCreated = doc.createElementNS(Namespaces.WSU, wsuPrefix + ":Created");
+    tokenCreated.setTextContent(createdTime);
+    usernameToken.appendChild(tokenCreated);
 
-    // 9. embed the Nonce
+    // 7d. embed the Nonce
     nonce.setTextContent(encodedNonce);
     nonce.setAttribute("EncodingType", Namespaces.BASE64BINARY);
     usernameToken.appendChild(nonce);
 
-    // 10. emit the resulting document
+    // 8. emit the resulting document
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     Transformer transformer = TransformerFactory.newInstance().newTransformer();
     transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
@@ -234,10 +265,20 @@ public class Inject extends WssecUsernameTokenCalloutBase implements Execution {
     return new String(baos.toByteArray(), StandardCharsets.UTF_8);
   }
 
+  private int getExpiresIn(MessageContext msgCtxt) throws Exception {
+    String expiryString = getSimpleOptionalProperty("expiry", msgCtxt);
+    if (expiryString == null) return 0;
+    expiryString = expiryString.trim();
+    Long durationInMilliseconds = TimeResolver.resolveExpression(expiryString);
+    if (durationInMilliseconds < 0L) return 0;
+    return ((Long) (durationInMilliseconds / 1000L)).intValue();
+  }
+
   static class PolicyConfiguration {
     public String username; // required
     public String password; // required
     public PasswordEncoding passwordEncoding;
+    public int expiresInSeconds = 0; // optional
 
     public PolicyConfiguration withUsername(String username) {
       this.username = username;
@@ -253,6 +294,11 @@ public class Inject extends WssecUsernameTokenCalloutBase implements Execution {
       this.passwordEncoding = passwordEncoding;
       return this;
     }
+
+    public PolicyConfiguration withExpiresIn(int expiresIn) {
+      this.expiresInSeconds = expiresIn;
+      return this;
+    }
   }
 
   public ExecutionResult execute(final MessageContext msgCtxt, final ExecutionContext execContext) {
@@ -263,7 +309,8 @@ public class Inject extends WssecUsernameTokenCalloutBase implements Execution {
           new PolicyConfiguration()
               .withUsername(getUsername(msgCtxt))
               .withPassword(getPassword(msgCtxt))
-              .withPasswordEncoding(getPasswordEncoding(msgCtxt));
+              .withPasswordEncoding(getPasswordEncoding(msgCtxt))
+              .withExpiresIn(getExpiresIn(msgCtxt));
 
       String resultingXmlString = injectToken(document, policyConfiguration);
       String outputVar = getOutputVar(msgCtxt);

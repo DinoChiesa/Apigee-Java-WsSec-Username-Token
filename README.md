@@ -117,7 +117,7 @@ To use it,
 configure the policy this way:
 
 ```xml
-<JavaCallout name='Java-WSSEC-Username-Token>
+<JavaCallout name='Java-WSSEC-Username-Token'>
   <Properties>
     <Property name='source'>message.content</Property>
     <Property name='output-variable'>output</Property>
@@ -136,12 +136,12 @@ The properties are:
 | -------------------- | ------------ |
 | `source`             | optional. the variable name in which to obtain the source document to sign. Defaults to message.content |
 | `output-variable`    | optional. the variable name in which to write the signed XML. Defaults to message.content |
-| `username`           | required. the username to use within the UsernameToken |
-| `password`           | required. the password to use within the UsernameToken |
+| `username`           | required. the username to use within the `UsernameToken` |
+| `password`           | required. the password to use within the `UsernameToken` |
 | `password-encoding`  | optional. One of: DIGEST, TEXT (case insensitive). Defaults to TEXT. If Digest, then the password is encoded as Base64(SHA1(nonce+created+password)). If TEXT, the password is encoded directly, in plaintext.  |
 | `expiry`             | optional. a timespan expression, such as `180s`, `5m`, or `1h`, indicating 180 seconds, 5 minutes, or 1 hour respectively. If included and if it resolves to a timespan greater than zero, the callout will inject a `wsu:Timestamp` element into the document under the WS-Security `Header`, with `wsu:Created` and a `wsu:Expires` child elements. |
-| `want-nonce`         | optional. whether to insert a wsse:Nonce element into the UsernameToken.  |
-| `want-created-time`  | optional. whether to insert a wsu:Created element into the UsernameToken.  |
+| `want-nonce`         | optional. Specify one of {true,false}. Indicates whether to insert a `wsse:Nonce` element into the `UsernameToken`.  |
+| `want-created-time`  | optional. Specify one of {true,false}. Indicates whether to insert a `wsu:Created` element into the `UsernameToken`.  |
 
 
 See [the example API proxy included here](./bundle) for a working example showing some of the possible policy configurations.

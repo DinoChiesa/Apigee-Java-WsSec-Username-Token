@@ -32,6 +32,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.BiFunction;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
@@ -248,14 +249,20 @@ public class Inject extends WssecUsernameTokenCalloutBase implements Execution {
     usernameToken.appendChild(password);
 
     // 7c. embed a Created element under UsernameToken
-    Element tokenCreated = doc.createElementNS(Namespaces.WSU, wsuPrefix + ":Created");
-    tokenCreated.setTextContent(createdTime);
-    usernameToken.appendChild(tokenCreated);
+    if (policyConfiguration.passwordEncoding == PasswordEncoding.DIGEST
+        || policyConfiguration.wantCreatedTime) {
+      Element tokenCreated = doc.createElementNS(Namespaces.WSU, wsuPrefix + ":Created");
+      tokenCreated.setTextContent(createdTime);
+      usernameToken.appendChild(tokenCreated);
+    }
 
     // 7d. embed the Nonce
-    nonce.setTextContent(encodedNonce);
-    nonce.setAttribute("EncodingType", Namespaces.BASE64BINARY);
-    usernameToken.appendChild(nonce);
+    if (policyConfiguration.passwordEncoding == PasswordEncoding.DIGEST
+        || policyConfiguration.wantNonce) {
+      nonce.setTextContent(encodedNonce);
+      nonce.setAttribute("EncodingType", Namespaces.BASE64BINARY);
+      usernameToken.appendChild(nonce);
+    }
 
     // 8. emit the resulting document
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -274,11 +281,33 @@ public class Inject extends WssecUsernameTokenCalloutBase implements Execution {
     return ((Long) (durationInMilliseconds / 1000L)).intValue();
   }
 
+  private Optional<Boolean> getNamedOptionalBoolean(String name, MessageContext msgCtxt)
+      throws Exception {
+    String value = getSimpleOptionalProperty(name, msgCtxt);
+    if (value == null) return Optional.empty();
+    return Optional.of(value.trim().toLowerCase().equals("true"));
+  }
+
+  private Optional<Boolean> getWantNonceOptional(MessageContext msgCtxt) throws Exception {
+    return getNamedOptionalBoolean("want-nonce", msgCtxt);
+  }
+
+  private Optional<Boolean> getWantCreatedTimeOptional(MessageContext msgCtxt) throws Exception {
+    return getNamedOptionalBoolean("want-created-time", msgCtxt);
+  }
+
   static class PolicyConfiguration {
     public String username; // required
     public String password; // required
     public PasswordEncoding passwordEncoding;
     public int expiresInSeconds = 0; // optional
+    public boolean wantNonce; // optional
+    public boolean wantCreatedTime; // optional
+
+    public PolicyConfiguration() {
+      wantNonce = false;
+      wantCreatedTime = false;
+    }
 
     public PolicyConfiguration withUsername(String username) {
       this.username = username;
@@ -299,6 +328,16 @@ public class Inject extends WssecUsernameTokenCalloutBase implements Execution {
       this.expiresInSeconds = expiresIn;
       return this;
     }
+
+    public PolicyConfiguration withWantNonce(boolean wantNonce) {
+      this.wantNonce = wantNonce;
+      return this;
+    }
+
+    public PolicyConfiguration withWantCreatedTime(boolean wantCreatedTime) {
+      this.wantCreatedTime = wantCreatedTime;
+      return this;
+    }
   }
 
   public ExecutionResult execute(final MessageContext msgCtxt, final ExecutionContext execContext) {
@@ -311,6 +350,11 @@ public class Inject extends WssecUsernameTokenCalloutBase implements Execution {
               .withPassword(getPassword(msgCtxt))
               .withPasswordEncoding(getPasswordEncoding(msgCtxt))
               .withExpiresIn(getExpiresIn(msgCtxt));
+
+      getWantNonceOptional(msgCtxt)
+          .ifPresent(wantNonce -> policyConfiguration.withWantNonce(wantNonce));
+      getWantCreatedTimeOptional(msgCtxt)
+          .ifPresent(wantCreatedTime -> policyConfiguration.withWantCreatedTime(wantCreatedTime));
 
       String resultingXmlString = injectToken(document, policyConfiguration);
       String outputVar = getOutputVar(msgCtxt);

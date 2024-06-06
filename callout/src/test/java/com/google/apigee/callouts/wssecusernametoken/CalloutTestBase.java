@@ -1,4 +1,4 @@
-// Copyright © 2019-2022 Google LLC.
+// Copyright © 2019-2024 Google LLC.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,23 +15,20 @@
 
 package com.google.apigee.callouts.wssecusernametoken;
 
-import com.apigee.flow.execution.ExecutionContext;
-import com.apigee.flow.message.Message;
-import com.apigee.flow.message.MessageContext;
+import com.google.apigee.fakes.FakeExecutionContext;
+import com.google.apigee.fakes.FakeMessage;
+import com.google.apigee.fakes.FakeMessageContext;
 import java.io.InputStream;
 import java.lang.reflect.Method;
-import java.util.HashMap;
-import java.util.Map;
-import mockit.Mock;
-import mockit.MockUp;
 import org.testng.annotations.BeforeMethod;
 
 public abstract class CalloutTestBase {
 
-  MessageContext msgCtxt;
+  FakeMessageContext msgCtxt;
+  FakeExecutionContext exeCtxt;
+
   InputStream messageContentStream;
-  Message message;
-  ExecutionContext exeCtxt;
+  FakeMessage message;
 
   @BeforeMethod
   public void beforeMethod(Method method) throws Exception {
@@ -40,58 +37,12 @@ public abstract class CalloutTestBase {
     System.out.printf("\n\n==================================================================\n");
     System.out.printf("TEST %s.%s()\n", className, methodName);
 
-    msgCtxt =
-        new MockUp<MessageContext>() {
-          private Map<String,Object> variables;
+    message = new FakeMessage();
+    msgCtxt = new FakeMessageContext(message);
+    exeCtxt = new FakeExecutionContext();
+  }
 
-          public void $init() {
-            variables = new HashMap<String,Object>();
-          }
-
-          @Mock()
-          public Object getVariable(final String name) {
-            if (variables == null) {
-              variables = new HashMap<String,Object>();
-            }
-            return variables.get(name);
-          }
-
-          @Mock()
-          public boolean setVariable(final String name, final Object value) {
-            if (variables == null) {
-              variables = new HashMap<String,Object>();
-            }
-            System.out.printf("setVariable(%s, %s)\n", name, value.toString());
-            variables.put(name, value);
-            return true;
-          }
-
-          @Mock()
-          public boolean removeVariable(final String name) {
-            if (variables == null) {
-              variables = new HashMap<String,Object>();
-            }
-            if (variables.containsKey(name)) {
-              variables.remove(name);
-            }
-            return true;
-          }
-
-          @Mock()
-          public Message getMessage() {
-            return message;
-          }
-        }.getMockInstance();
-
-    exeCtxt = new MockUp<ExecutionContext>() {}.getMockInstance();
-
-    message =
-        new MockUp<Message>() {
-          @Mock()
-          public InputStream getContentAsStream() {
-            // new ByteArrayInputStream(messageContent.getBytes(StandardCharsets.UTF_8));
-            return messageContentStream;
-          }
-        }.getMockInstance();
+  public InputStream getMessageContentStream() {
+    return messageContentStream;
   }
 }

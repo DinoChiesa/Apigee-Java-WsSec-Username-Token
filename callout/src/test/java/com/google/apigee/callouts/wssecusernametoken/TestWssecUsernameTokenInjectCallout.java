@@ -36,10 +36,14 @@ import org.xml.sax.SAXException;
 
 public class TestWssecUsernameTokenInjectCallout extends CalloutTestBase {
   private static final String simpleSoap11 =
-      "<soapenv:Envelope xmlns:ns1='http://ws.example.com/'"
-          + " xmlns:soapenv='http://schemas.xmlsoap.org/soap/envelope/'>  <soapenv:Body>   "
-          + " <ns1:sumResponse>      <ns1:return>9</ns1:return>    </ns1:sumResponse> "
-          + " </soapenv:Body></soapenv:Envelope>";
+      "<soapenv:Envelope xmlns:ns1='http://ws.example.com/'\n"
+          + "  xmlns:soapenv='http://schemas.xmlsoap.org/soap/envelope/'>\n"
+          + "  <soapenv:Body>\n"
+          + "    <ns1:sumResponse>\n"
+          + "      <ns1:return>9</ns1:return>\n"
+          + "    </ns1:sumResponse>\n"
+          + "  </soapenv:Body>\n"
+          + "</soapenv:Envelope>";
 
   private static final String simpleSoap12 =
       "<soap:Envelope xmlns:soap='http://www.w3.org/2003/05/soap-envelope'\n"
@@ -146,7 +150,27 @@ public class TestWssecUsernameTokenInjectCallout extends CalloutTestBase {
   }
 
   @Test
-  public void validResult() throws Exception {
+  public void validResult_noNonce_noCreated() throws Exception {
+    validResult(false, false);
+  }
+
+  @Test
+  public void validResult_noNonce_withCreated() throws Exception {
+    validResult(false, true);
+  }
+
+  @Test
+  public void validResult_withNonce_noCreated() throws Exception {
+    validResult(false, true);
+  }
+
+  @Test
+  public void validResult_withNonce_withCreated() throws Exception {
+    validResult(true, true);
+  }
+
+  private void validResult(boolean wantNonce, boolean wantCreatedTime) throws Exception {
+
     final String appliedUsername = "emil@gaffanon.com";
     final String appliedPassword = "Albatross1";
     String method = "validResult() ";
@@ -159,6 +183,8 @@ public class TestWssecUsernameTokenInjectCallout extends CalloutTestBase {
     props.put("source", "message.content");
     props.put("username", "{my-username}");
     props.put("password", "{my-password}");
+    props.put("want-nonce", String.valueOf(wantNonce));
+    props.put("want-created-time", String.valueOf(wantCreatedTime));
     props.put("output-variable", "output");
 
     Inject callout = new Inject(props);
@@ -199,11 +225,11 @@ public class TestWssecUsernameTokenInjectCallout extends CalloutTestBase {
 
     // Nonce
     nl = usernameToken.getElementsByTagNameNS(Namespaces.WSSE, "Nonce");
-    Assert.assertEquals(nl.getLength(), 1, method + "Nonce element");
+    Assert.assertEquals(nl.getLength(), wantNonce ? 1 : 0, method + "Nonce element");
 
     // Created
     nl = usernameToken.getElementsByTagNameNS(Namespaces.WSU, "Created");
-    Assert.assertEquals(nl.getLength(), 1, method + "Created element");
+    Assert.assertEquals(nl.getLength(), wantCreatedTime ? 1 : 0, method + "Created element");
   }
 
   @Test
@@ -334,15 +360,24 @@ public class TestWssecUsernameTokenInjectCallout extends CalloutTestBase {
 
     // Nonce
     nl = usernameToken.getElementsByTagNameNS(Namespaces.WSSE, "Nonce");
-    Assert.assertEquals(nl.getLength(), 1, method + "Nonce element");
+    Assert.assertEquals(nl.getLength(), 0, method + "Nonce element");
 
     // Created
     nl = usernameToken.getElementsByTagNameNS(Namespaces.WSU, "Created");
-    Assert.assertEquals(nl.getLength(), 1, method + "Created element");
+    Assert.assertEquals(nl.getLength(), 0, method + "Created element");
   }
 
   @Test
-  public void withTimestamp_soap12() throws Exception {
+  public void withTimestamp_soap12_withCreated() throws Exception {
+    withTimestamp_soap12(true);
+  }
+
+  @Test
+  public void withTimestamp_soap12_noCreated() throws Exception {
+    withTimestamp_soap12(false);
+  }
+
+  private void withTimestamp_soap12(boolean wantUsernameTokenCreatedTime) throws Exception {
     final String appliedUsername = "emil@gaffanon.com";
     final String appliedPassword = "Albatross1";
     String method = "withTimestamp_soap12() ";
@@ -355,6 +390,7 @@ public class TestWssecUsernameTokenInjectCallout extends CalloutTestBase {
     props.put("source", "message.content");
     props.put("username", "{my-username}");
     props.put("password", "{my-password}");
+    props.put("want-created-time", String.valueOf(wantUsernameTokenCreatedTime));
     props.put("expiry", "300s");
     props.put("output-variable", "output");
 
@@ -394,12 +430,17 @@ public class TestWssecUsernameTokenInjectCallout extends CalloutTestBase {
 
     // token-created
     nl = usernameToken.getElementsByTagNameNS(Namespaces.WSU, "Created");
-    Assert.assertEquals(nl.getLength(), 1, method + "UsernameToken/Created element");
-    Element tokenCreatedElement = (Element) nl.item(0);
-    String tokenCreated = tokenCreatedElement.getTextContent();
-    Assert.assertNotNull(tokenCreated, "tokenCreated");
+    Assert.assertEquals(
+        nl.getLength(),
+        wantUsernameTokenCreatedTime ? 1 : 0,
+        method + "UsernameToken/Created element");
+    if (wantUsernameTokenCreatedTime) {
+      Element tokenCreatedElement = (Element) nl.item(0);
+      String tokenCreated = tokenCreatedElement.getTextContent();
+      Assert.assertNotNull(tokenCreated, "tokenCreated");
 
-    Assert.assertEquals(tokenCreated, timestampCreated);
+      Assert.assertEquals(tokenCreated, timestampCreated);
+    }
   }
 
   @Test

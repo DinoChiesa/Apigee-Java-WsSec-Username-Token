@@ -14,7 +14,10 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <apigee.expressions.version>1.0.0</apigee.expressions.version>
     <apigee.message.flow.version>1.0.0</apigee.message.flow.version>
-    <jdk.target.version>11</jdk.target.version>
+    <jdk.target.version>8</jdk.target.version>
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
+    <maven.compiler.release>1.8</maven.compiler.release>
     <slf4j.version>1.7.25</slf4j.version>
     <testng.version>6.8.7</testng.version>
     <jmockit.version>1.49</jmockit.version>
@@ -94,6 +97,11 @@
         <configuration>
           <showDeprecation>true</showDeprecation>
           <release>${jdk.target.version}</release>
+          <!-- the following may be necessary when building with java 1.8 -->
+          <source>${jdk.target.version}</source>
+          <target>${jdk.target.version}</target>
+
+          <!-- testCompile gets its configuration from maven.compiler.release  -->
           <compilerArgs>
             <!-- <arg>-verbose</arg> -->
             <arg>-Xlint:unchecked,deprecation</arg>

@@ -65,6 +65,10 @@ public class FakeMessageContext implements MessageContext {
     return message;
   }
 
+  public Message getMessage() {
+    return message;
+  }
+
   /* ========================================================================= */
   /* Everything below this line is not implemented and not needed in this Fake */
 
@@ -101,10 +105,6 @@ public class FakeMessageContext implements MessageContext {
   }
 
   public Connection getTargetConnection() {
-    throw new UnsupportedOperationException();
-  }
-
-  public Message getMessage() {
     throw new UnsupportedOperationException();
   }
 

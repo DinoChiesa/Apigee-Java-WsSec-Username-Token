@@ -21,35 +21,47 @@ import com.apigee.flow.message.Message;
 import com.apigee.flow.message.MessageContext;
 import com.apigee.flow.message.TransportMessage;
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public class FakeMessage implements Message {
-  Supplier<InputStream> messageContentStreamSupplier;
-  InputStream messageContentStream;
+  private InputStream messageContentStream;
+  private Map<String, Object> variables;
+  private Map<String, Object> headers;
+  private Map<String, Object> qparams;
+  private boolean verbose = true;
 
-  public FakeMessage() {}
+  public FakeMessage() {
+    setContent("");
+  }
 
-  // public FakeMessage(Supplier<InputStream> messageContentStreamSupplier) {
-  //   this.messageContentStreamSupplier = messageContentStreamSupplier;
-  // }
+  public void setVerbose(boolean v) {
+    this.verbose = v;
+  }
+
+  public boolean isVerbose() {
+    return this.verbose;
+  }
 
   public void setContent(InputStream inStream) {
     this.messageContentStream = inStream;
   }
 
   public void setContent(String content) {
-    throw new UnsupportedOperationException();
+    this.messageContentStream = new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8));
   }
 
   public InputStream getContentAsStream() {
     return messageContentStream;
-    // return messageContentStreamSupplier.get();
   }
 
   public String getContent() {
@@ -58,22 +70,130 @@ public class FakeMessage implements Message {
         .collect(Collectors.joining("\n"));
   }
 
+  private Map<String, Object> getVariables() {
+    if (variables == null) {
+      variables = new HashMap<String, Object>();
+    }
+    return variables;
+  }
+
+  private Map<String, Object> getHeaders() {
+    if (headers == null) {
+      headers = new HashMap<String, Object>();
+    }
+    return headers;
+  }
+
+  private Map<String, Object> getQparams() {
+    if (qparams == null) {
+      qparams = new HashMap<String, Object>();
+    }
+    return qparams;
+  }
+
+  public <T> T getVariable(final String name) {
+    return (T) getVariables().get(name);
+  }
+
+  public boolean setVariable(final String name, final Object value) {
+    getVariables().put(name, value);
+    return true;
+  }
+
+  public boolean removeVariable(final String name) {
+    if (getVariables().containsKey(name)) {
+      variables.remove(name);
+    }
+    return true;
+  }
+
+  public String getHeader(final String name) {
+    List<String> headerList = getHeaders(name);
+    return (headerList != null) ? headerList.get(0) : null;
+  }
+
+  public List<String> getHeaders(final String name) {
+    String lowerName = name.toLowerCase();
+    if (getHeaders().containsKey(lowerName)) {
+      @SuppressWarnings("unchecked")
+      List<String> list = (List<String>) getHeaders().get(lowerName);
+      return list;
+    }
+    return null;
+  }
+
+  public boolean setHeader(final String name, final Object value) {
+    String lowerName = name.toLowerCase();
+    if (isVerbose()) {
+      System.out.printf("setHeader(%s) <= %s\n", lowerName, (value != null) ? value : "(null)");
+    }
+    if (getHeaders().containsKey(lowerName)) {
+      if (!lowerName.equals("host")) {
+        @SuppressWarnings("unchecked")
+        List<String> values = (List<String>) getHeaders().get(lowerName);
+        values.add(value.toString());
+      }
+    } else {
+      List<String> values = new ArrayList<String>();
+      values.add(value.toString());
+      getHeaders().put(lowerName, values);
+    }
+    return true;
+  }
+
+  public boolean removeHeader(final String name) {
+    String lowerName = name.toLowerCase();
+    if (isVerbose()) {
+      System.out.printf("removeHeader(%s)\n", lowerName);
+    }
+    if (getHeaders().containsKey(lowerName)) {
+      getHeaders().remove(lowerName);
+    }
+    return true;
+  }
+
+  public Set<String> getHeaderNames() {
+    return getHeaders().entrySet().stream().map(e -> e.getKey()).collect(Collectors.toSet());
+  }
+
+  public Set<String> getQueryParamNames() {
+    return getQparams().entrySet().stream().map(e -> e.getKey()).collect(Collectors.toSet());
+  }
+
+  public String getQueryParam(final String name) {
+    List<String> paramList = getQueryParams(name);
+    return (paramList != null) ? paramList.get(0) : null;
+  }
+
+  public boolean setQueryParam(final String name, final Object value) {
+    if (isVerbose()) {
+      System.out.printf("setQueryParam(%s) <= %s\n", name, (value != null) ? value : "(null)");
+    }
+    if (getQparams().containsKey(name)) {
+      @SuppressWarnings("unchecked")
+      List<String> values = (List<String>) getQparams().get(name);
+      values.add(value.toString());
+    } else {
+      List<String> values = new ArrayList<String>();
+      values.add(value.toString());
+      getQparams().put(name, values);
+    }
+    return true;
+  }
+
+  public List<String> getQueryParams(final String name) {
+    if (getQparams().containsKey(name)) {
+      @SuppressWarnings("unchecked")
+      List<String> list = (List<String>) getQparams().get(name);
+      return list;
+    }
+    return null;
+  }
+
   /* ========================================================================= */
   /* Everything below this line is not implemented and not needed in this Fake */
 
-  public Set<String> getHeaderNames() {
-    throw new UnsupportedOperationException();
-  }
-
-  public String getHeader(String headerName) {
-    throw new UnsupportedOperationException();
-  }
-
   public String getHeader(String headerName, int index) {
-    throw new UnsupportedOperationException();
-  }
-
-  public List<String> getHeaders(String headerName) {
     throw new UnsupportedOperationException();
   }
 
@@ -82,10 +202,6 @@ public class FakeMessage implements Message {
   }
 
   public Object getHeadersAsObject(String headerName) {
-    throw new UnsupportedOperationException();
-  }
-
-  public boolean setHeader(String name, Object value) {
     throw new UnsupportedOperationException();
   }
 
@@ -101,10 +217,6 @@ public class FakeMessage implements Message {
     throw new UnsupportedOperationException();
   }
 
-  public boolean removeHeader(String headerName) {
-    throw new UnsupportedOperationException();
-  }
-
   public boolean removeHeader(String headerName, int index) {
     throw new UnsupportedOperationException();
   }
@@ -117,27 +229,7 @@ public class FakeMessage implements Message {
     throw new UnsupportedOperationException();
   }
 
-  public <T> T getVariable(String name) {
-    throw new UnsupportedOperationException();
-  }
-
-  public boolean setVariable(String name, Object value) {
-    throw new UnsupportedOperationException();
-  }
-
-  public boolean removeVariable(String name) {
-    throw new UnsupportedOperationException();
-  }
-
-  public Set<String> getQueryParamNames() {
-    throw new UnsupportedOperationException();
-  }
-
   public int getQueryParamsCount() {
-    throw new UnsupportedOperationException();
-  }
-
-  public String getQueryParam(String queryParamName) {
     throw new UnsupportedOperationException();
   }
 
@@ -149,15 +241,7 @@ public class FakeMessage implements Message {
     throw new UnsupportedOperationException();
   }
 
-  public List<String> getQueryParams(String queryParamName) {
-    throw new UnsupportedOperationException();
-  }
-
   public String getQueryParamsAsString(String queryParamName) {
-    throw new UnsupportedOperationException();
-  }
-
-  public boolean setQueryParam(String name, Object value) {
     throw new UnsupportedOperationException();
   }
 

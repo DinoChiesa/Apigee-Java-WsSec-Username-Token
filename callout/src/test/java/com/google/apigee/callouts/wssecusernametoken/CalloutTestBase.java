@@ -24,11 +24,11 @@ import org.testng.annotations.BeforeMethod;
 
 public abstract class CalloutTestBase {
 
+  FakeMessage message;
   FakeMessageContext msgCtxt;
   FakeExecutionContext exeCtxt;
 
   InputStream messageContentStream;
-  FakeMessage message;
 
   @BeforeMethod
   public void beforeMethod(Method method) throws Exception {
